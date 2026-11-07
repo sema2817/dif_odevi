@@ -12,11 +12,13 @@ x_test, y_test = test_df.iloc[:, 0].values, test_df.iloc[:, 1].values
 x_pred_new = tahmin_df.iloc[:, 1].values
 
 plt.figure(figsize=(8, 6))
-plt.scatter(x_train, y_train, color="blue", label="Eğitim Verisi", alpha=0.7)
-plt.scatter(x_test, y_test, color="red", label="Test Verisi", marker="x")
+plt.scatter(x_train, y_train, color="purple", label="Eğitim Verisi", alpha=0.7)
+plt.scatter(x_test, y_test, color="blue", label="Test Verisi", marker="x")
+tum_bucuklular = np.arange(-3.0, 3.1, 0.5)
+plt.xticks(tum_bucuklular)
 plt.xlabel("x")
 plt.ylabel("y")
-plt.title("1. Eğitim ve Test Verisinin Dağılımı")
+plt.title("1 - Eğitim ve Test Verisinin Dağılımı")
 plt.legend()
 plt.grid(True)
 plt.savefig("soru1_veri.png")
@@ -35,14 +37,14 @@ def calculate_mse(y_true, y_pred):
 degrees = range(1, 9)
 train_mses = []
 test_mses = []
-models_beta = {}
+deg_to_coef = {}
 
 for deg in degrees:
   X_train = create_design_matrix(x_train, deg)
   X_test = create_design_matrix(x_test, deg)
 
   beta = np.linalg.inv(X_train.T @ X_train) @ X_train.T @ y_train
-  models_beta[deg] = beta
+  deg_to_coef[deg] = beta
 
   y_train_pred = X_train @ beta
   y_test_pred = X_test @ beta
@@ -53,38 +55,38 @@ for deg in degrees:
 results_df = pd.DataFrame(
     {"Derece": list(degrees), "Eğitim MSE": train_mses, "Test MSE": test_mses}
 )
-print("--- 2. Derecelere Göre MSE Tablosu ---")
+print("2 - Derecelere Göre MSE Tablosu ---")
 print(results_df.to_string(index=False))
 
 plt.figure(figsize=(8, 5))
-plt.plot(degrees, train_mses, marker="o", label="Eğitim MSE", color="blue")
-plt.plot(degrees, test_mses, marker="s", label="Test MSE", color="orange")
+plt.plot(degrees, train_mses, marker="o", label="Eğitim MSE", color="purple")
+plt.plot(degrees, test_mses, marker="s", label="Test MSE", color="blue")
 plt.xlabel("Polinom Derecesi")
 plt.ylabel("Ortalama Karesel Hata (MSE)")
-plt.title("2. Derecelere Göre Eğitim ve Test MSE Değişimi")
+plt.title("2 - Derecelere Göre Eğitim ve Test MSE Değişimi")
 plt.legend()
 plt.grid(True)
 plt.savefig("soru2_mse.png")
 plt.show()
 
 #3.soru
-best_deg_y = degrees[np.argmin(test_mses)]
+best_deg = degrees[np.argmin(test_mses)]
 print(
-    f"\n3. y için seçilen optimum derece (Test MSE'ye göre): {best_deg_y}"
+    f"\n3 - y için seçilen optimum derece (Test MSE'ye göre): {best_deg}"
 )
 
 #4.soru
-selected_deg = best_deg_y
-eval_degrees = [
+selected_deg = best_deg
+neighbor_degrees = [
     max(1, selected_deg - 1),
     selected_deg,
     min(8, selected_deg + 1),
 ]
 
 plt.figure(figsize=(10, 6))
-for deg in eval_degrees:
+for deg in neighbor_degrees:
   X_tr = create_design_matrix(x_train, deg)
-  y_tr_pred = X_tr @ models_beta[deg]
+  y_tr_pred = X_tr @ deg_to_coef[deg]
   residuals = y_train - y_tr_pred
   plt.scatter(
       x_train, residuals, label=f"Derece {deg}", alpha=0.7, edgecolors="k"
@@ -93,7 +95,7 @@ for deg in eval_degrees:
 plt.axhline(0, color="red", linestyle="--")
 plt.xlabel("x")
 plt.ylabel("Kalıntı (Gerçek - Tahmin)")
-plt.title("4. Kalıntı Grafikleri Karşılaştırması")
+plt.title("4 - Kalıntı Grafikleri Karşılaştırması")
 plt.legend()
 plt.grid(True)
 plt.savefig("soru4_kalinti.png")
@@ -134,9 +136,9 @@ print(f"5. ln(y) için seçilen optimum derece: {best_deg_log}")
 #6.soru
 print("\n--- 6. Bölgesel Davranış Analizi ve Görselleştirme ---")
 x_range = np.linspace(-4, 4, 400)
-X_range_matrix = create_design_matrix(x_range, best_deg_y)
+X_range_matrix = create_design_matrix(x_range, best_deg)
 
-y_pred_range_normal = X_range_matrix @ models_beta[best_deg_y]
+y_pred_range_normal = X_range_matrix @ deg_to_coef[best_deg]
 
 X_range_matrix_log = create_design_matrix(x_range, best_deg_log)
 y_pred_range_log = np.exp(X_range_matrix_log @ log_models_beta[best_deg_log])
@@ -148,7 +150,7 @@ plt.plot(
     y_pred_range_normal,
     color="red",
     linewidth=2,
-    label=f"Normal Model (Derece {best_deg_y})",
+    label=f"Normal Model (Derece {best_deg})",
 )
 plt.plot(
     x_range,
@@ -211,7 +213,7 @@ def gradient_descent_scaled(X, y, lr=1e-5, epochs=3000):
 
   return theta, cost_history, X_mean, X_std
 
-X_best_train = create_design_matrix(x_train, best_deg_y)
+X_best_train = create_design_matrix(x_train, best_deg)
 theta_gd, cost_hist, x_mean, x_std = gradient_descent_scaled(
     X_best_train, y_train, lr=0.01, epochs=3000
 )
@@ -221,14 +223,14 @@ plt.plot(cost_hist, color="purple")
 plt.xlabel("İterasyon (Epoch)")
 plt.ylabel("Kayıp (Cost - MSE/2)")
 plt.title(
-    f"7. Gradyan Düşümü Kayıp Eğrisi (Derece {best_deg_y}) - Ölçeklendirilmiş"
+    f"7. Gradyan Düşümü Kayıp Eğrisi (Derece {best_deg}) - Ölçeklendirilmiş"
 )
 plt.grid(True)
 plt.savefig("soru7_kayip.png")
 plt.show()
 
 print("\n--- 7. Katsayı Karşılaştırması ---")
-print("Analitik Beta:", models_beta[best_deg_y])
+print("Analitik Beta:", deg_to_coef[best_deg])
 print("Gradyan Düşümü Beta (Ölçekli):", theta_gd)
 
 #8.soru
