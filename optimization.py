@@ -103,48 +103,48 @@ plt.show()
 
 #5.soru
 log_y_train = np.log(y_train)
-log_train_mses = []
-log_test_mses = []
-log_models_beta = {}
+log_train_mse = []
+log_test_mse = []
+log_coef = {}
 
 for deg in degrees:
   X_train = create_design_matrix(x_train, deg)
   X_test = create_design_matrix(x_test, deg)
 
   beta_log = np.linalg.inv(X_train.T @ X_train) @ X_train.T @ log_y_train
-  log_models_beta[deg] = beta_log
+  log_coef [deg] = beta_log
 
-  y_train_pred_log = np.exp(X_train @ beta_log)
-  y_test_pred_log = np.exp(X_test @ beta_log)
+  y_train_log_pred = np.exp(X_train @ beta_log)
+  y_test_log_pred = np.exp(X_test @ beta_log)
 
-  log_train_mses.append(calculate_mse(y_train, y_train_pred_log))
-  log_test_mses.append(calculate_mse(y_test, y_test_pred_log))
+  log_train_mse.append(calculate_mse(y_train, y_train_log_pred))
+  log_test_mse.append(calculate_mse(y_test, y_test_log_pred))
 
 log_results_df = pd.DataFrame(
     {
         "Derece": list(degrees),
-        "Eğitim MSE (ln y)": log_train_mses,
-        "Test MSE (ln y)": log_test_mses,
+        "Eğitim MSE (Orijinal Ölçek)": log_train_mse,
+        "Test MSE (Orijinal Ölçek)": log_test_mse,
     }
 )
-print("\n--- 5. ln(y) Dönüşümlü MSE Tablosu ---")
+print("\n 5 - ln(y) Dönüşümlü MSE Tablosu ")
 print(log_results_df.to_string(index=False))
 
-best_deg_log = degrees[np.argmin(log_test_mses)]
-print(f"5. ln(y) için seçilen optimum derece: {best_deg_log}")
+best_deg_log = degrees[np.argmin(log_test_mse)]
+print(f"5 - ln(y) için seçilen optimum derece: {best_deg_log}")
 
 #6.soru
-print("\n--- 6. Bölgesel Davranış Analizi ve Görselleştirme ---")
+print("\n 6 - Bölgesel Davranış Analizi ve Görselleştirme")
 x_range = np.linspace(-4, 4, 400)
-X_range_matrix = create_design_matrix(x_range, best_deg)
 
+X_range_matrix = create_design_matrix(x_range, best_deg)
 y_pred_range_normal = X_range_matrix @ deg_to_coef[best_deg]
 
 X_range_matrix_log = create_design_matrix(x_range, best_deg_log)
-y_pred_range_log = np.exp(X_range_matrix_log @ log_models_beta[best_deg_log])
+y_pred_range_log = np.exp(X_range_matrix_log @ log_coef [best_deg_log])
 
 plt.figure(figsize=(12, 7))
-plt.scatter(x_train, y_train, color="black", label="Eğitim Verisi", alpha=0.6)
+plt.scatter(x_train, y_train, color="purple", label="Eğitim Verisi", alpha=0.6)
 plt.plot(
     x_range,
     y_pred_range_normal,
@@ -164,30 +164,32 @@ plt.plot(
 plt.axvspan(
     0.5,
     1.5,
-    color="yellow",
+    color="orange",
     alpha=0.2,
     label="İnterpolasyon Bölgesi [0.5, 1.5]",
 )
-plt.axvspan(3, 4, color="orange", alpha=0.15, label="Ekstrapolasyon [3, 4]")
-plt.axvspan(-4, -3, color="orange", alpha=0.15, label="Ekstrapolasyon [-4, -3]")
+plt.axvspan(3, 4, color="pink", alpha=0.30, label="Ekstrapolasyon [3, 4]")
+plt.axvspan(-4, -3, color="pink", alpha=0.30, label="Ekstrapolasyon [-4, -3]")
 
 plt.xlabel("x")
 plt.ylabel("y")
 plt.title(
-    "6. [-4, 4] Aralığında y ve ln(y) Modellerinin Tahmin Karşılaştırması"
+    "6 - [-4, 4] Aralığında y ve ln(y) Modellerinin Tahmin Karşılaştırması"
 )
 plt.legend()
 plt.grid(True, linestyle=":", alpha=0.6)
 plt.savefig("soru6_karsilastirma.png")
 plt.show()
 
-print("İnterpolasyon ve Ekstrapolasyon Yorumları:")
 print(
-    " - İnterpolasyon Bölgesi [0.5, 1.5]: Her iki model de eğitim verisinin yoğun olduğu bu aralıkta kararlı ve tutarlıdır."
+    "İnterpolasyon ve Ekstrapolasyon Yorumları: \n "
+    "- İnterpolasyon Bölgesi [0.5, 1.5]: Her iki model de eğitim verisinin"
+    " yoğun olduğu bu aralıkta kararlı ve tutarlıdır. \n"
+    "- Ekstrapolasyon Bölgeleri [3, 4] ve [-4, -3]: Veri aralığı dışı olduğundan"
+    " normal polinom model uçlarda ani salınımlar yapabilir. ln(y) modeli ise"
+    " logaritmik dönüşümün baskılayıcı etkisi sayesinde daha stabil davranabilir."
 )
-print(
-    " - Ekstrapolasyon Bölgeleri [3, 4] ve [-4, -3]: Veri aralığı dışı olduğundan normal polinom model uçlarda ani salınımlar yapabilir; ln(y) modeli ise logaritmik dönüşümün baskılayıcı etkisi sayesinde daha stabil davranabilir."
-)
+
 
 #7.soru
 def gradient_descent_scaled(X, y, lr=1e-5, epochs=3000):
@@ -198,50 +200,50 @@ def gradient_descent_scaled(X, y, lr=1e-5, epochs=3000):
   X_scaled = X.copy()
   X_scaled[:, 1:] = (X[:, 1:] - X_mean) / X_std
 
-  m, n = X_scaled.shape
-  theta = np.zeros(n)
+  n_samples, n_features= X_scaled.shape
+  beta = np.zeros(n_features)
   cost_history = []
 
   for _ in range(epochs):
-    predictions = X_scaled @ theta
+    predictions = X_scaled @ beta
     errors = predictions - y
-    cost = (1 / (2 * m)) * np.sum(errors**2)
+    cost = (1 / (2 * n_samples)) * np.sum(errors**2)
     cost_history.append(cost)
 
-    grad = (1 / m) * (X_scaled.T @ errors)
-    theta -= lr * grad
+    grad = (1 / n_samples) * (X_scaled.T @ errors)
+    beta -= lr * grad
 
-  return theta, cost_history, X_mean, X_std
+  return beta, cost_history, X_mean, X_std
 
 X_best_train = create_design_matrix(x_train, best_deg)
-theta_gd, cost_hist, x_mean, x_std = gradient_descent_scaled(
+beta_gd, cost_hist, x_mean, x_std = gradient_descent_scaled(
     X_best_train, y_train, lr=0.01, epochs=3000
 )
 
 plt.figure(figsize=(8, 4))
 plt.plot(cost_hist, color="purple")
-plt.xlabel("İterasyon (Epoch)")
+plt.xlabel("İterasyon")
 plt.ylabel("Kayıp (Cost - MSE/2)")
 plt.title(
-    f"7. Gradyan Düşümü Kayıp Eğrisi (Derece {best_deg}) - Ölçeklendirilmiş"
+    f"7 - Gradyan Düşümü Kayıp Eğrisi ({best_deg}. Derece) (Ölçeklendirilmiş)"
 )
 plt.grid(True)
 plt.savefig("soru7_kayip.png")
 plt.show()
 
-print("\n--- 7. Katsayı Karşılaştırması ---")
+print("\n 7 - Katsayı Karşılaştırması")
 print("Analitik Beta:", deg_to_coef[best_deg])
-print("Gradyan Düşümü Beta (Ölçekli):", theta_gd)
+print("Gradyan Düşümü Beta (Ölçeklendirilmiş):", beta_gd)
 
 #8.soru
 final_deg = best_deg_log
 X_pred_matrix = create_design_matrix(x_pred_new, final_deg)
-final_predictions = np.exp(X_pred_matrix @ log_models_beta[final_deg])
+final_predictions = np.exp(X_pred_matrix @ log_coef [final_deg])
 
 output_df = pd.DataFrame(
     {"id": tahmin_df.iloc[:, 0].values, "y": final_predictions}
 )
-output_df.to_csv("ogrenciNo_tahmin.csv", index=False)
+output_df.to_csv("26011603_tahmin.csv", index=False)
 print(
-    "\n8. Tahminler 'ogrenciNo_tahmin.csv' dosyasına başarıyla kaydedildi."
+    "\n 8 - Tahminler '26011603_tahmin.csv' dosyasına başarıyla kaydedilmiştir."
 )
