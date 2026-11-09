@@ -71,7 +71,7 @@ for deg in degrees:
 results_df = pd.DataFrame(
     {"Derece": list(degrees), "Eğitim MSE": train_mses, "Test MSE": test_mses}
 )
-print("2 - Derecelere Göre MSE Tablosu ---")
+print("2 - Derecelere Göre MSE Tablosu")
 print(results_df.to_string(index=False)) # Tablo indeks numaraları görünmeyecek şekilde ekrana yazdırılır
 
 plt.figure(figsize=(8, 5))
@@ -252,28 +252,45 @@ def gradient_descent_scaled(X, y, lr=1e-5, epochs=3000):
   return beta, cost_history, X_mean, X_std
 
 # En iyi polinom derecesine ait eğitim tasarım matrisi oluşturulur
-X_best_train = create_design_matrix(x_train, best_deg)
+X_best_train_normal = create_design_matrix(x_train, best_deg)
 # Ölçeklendirilmiş gradyan düşümü fonksiyonu 0.01 öğrenme oranı ve 3000 iterasyonla çalıştırılır
-beta_gd, cost_hist, x_mean, x_std = gradient_descent_scaled(
-    X_best_train, y_train, lr=0.01, epochs=3000
+beta_gd_normal, cost_hist_normal, _, _ = gradient_descent_scaled(
+    X_best_train_normal, y_train, lr=0.01, epochs=3000
 )
 
-plt.figure(figsize=(8, 4))
-plt.plot(cost_hist, color="purple")
+X_best_train_log = create_design_matrix(x_train, best_deg_log)
+beta_gd_log, cost_hist_log, _, _ = gradient_descent_scaled(
+    X_best_train_log, log_y_train, lr=0.01, epochs=3000
+)
+
+plt.figure(figsize=(12, 5))
+
+plt.subplot(1, 2, 1)
+plt.plot(cost_hist_normal, color="purple")
 plt.xlabel("İterasyon")
 plt.ylabel("Kayıp (Cost - MSE/2)")
-plt.title(
-    f"7 - Gradyan Düşümü Kayıp Eğrisi ({best_deg}. Derece) (Ölçeklendirilmiş)"
-)
+plt.title(f"7 - Normal Model Kayıp Eğrisi (Derece {best_deg})")
 plt.grid(True)
-plt.savefig("soru7_kayip.png")
+
+plt.subplot(1, 2, 2)
+plt.plot(cost_hist_log, color="blue")
+plt.xlabel("İterasyon")
+plt.ylabel("Kayıp (Cost - MSE/2)")
+plt.title(f"7 - Logaritmik Model Kayıp Eğrisi (Derece {best_deg_log})")
+plt.grid(True)
+
+plt.tight_layout()
+plt.savefig("soru7_kayip_karsilastirma.png")
 plt.show()
 
 # Doğrudan matris tersiyle bulunan analitik çözüm katsayıları ile 
 # iteratif gradyan düşümü katsayılarını karşılaştırmak için grafik konsola yazdırılır   
-print("\n 7 - Katsayı Karşılaştırması")
-print("Analitik Beta:", deg_to_coef[best_deg])
-print("Gradyan Düşümü Beta (Ölçeklendirilmiş):", beta_gd)
+print("\n 7 - Katsayı Karşılaştırmaları")
+print(f"Normal Model - Analitik Beta ({best_deg}. Derece):", deg_to_coef[best_deg])
+print(f"Normal Model - Gradyan Düşümü Beta:", beta_gd_normal)
+print("-" * 50)
+print(f"Logaritmik Model - Analitik Beta ({best_deg_log}. Derece):", log_coef[best_deg_log])
+print(f"Logaritmik Model - Gradyan Düşümü Beta:", beta_gd_log)
 
 #8.soru
 final_deg = best_deg_log
